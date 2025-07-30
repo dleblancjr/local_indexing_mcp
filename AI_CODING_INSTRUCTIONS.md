@@ -1,5 +1,15 @@
 # AI_CODING_INSTRUCTIONS.md
 
+<!-- AI ASSISTANT: ALWAYS READ THIS FILE BEFORE MAKING CODE CHANGES -->
+<!-- CHECKLIST:
+- [ ] All functions have type hints
+- [ ] Public functions have docstrings with Args/Returns/Raises
+- [ ] Error handling includes logging with context
+- [ ] Functions are under 20 lines
+- [ ] Using specific exceptions, not generic
+- [ ] Following KISS principle
+-->
+
 ## Overview
 
 This document provides guidelines for AI assistants working on this project. The primary goal is to maintain code quality through simplicity, clarity, and robustness.
