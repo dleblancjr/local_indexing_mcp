@@ -16,9 +16,11 @@ parts/
 sdist/
 var/
 wheels/
+share/python-wheels/
 *.egg-info/
 .installed.cfg
 *.egg
+MANIFEST
 
 # Virtual environments
 venv/
@@ -26,6 +28,8 @@ env/
 ENV/
 .venv/
 .env/
+env.bak/
+venv.bak/
 
 # IDE
 .vscode/
@@ -33,19 +37,44 @@ ENV/
 *.swp
 *.swo
 *~
+.project
+.pydevproject
+.settings/
 
 # OS
 .DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
 Thumbs.db
+
+# Testing
+.coverage
+.coverage.*
+htmlcov/
+.tox/
+.nox/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+coverage.xml
+*.cover
+*.py,cover
+.hypothesis/
 
 # Logs
 *.log
+logs/
+log/
 
 # Environment variables
 .env
 .env.local
+.env.*.local
 
-# Database files (common for indexing)
+# Database files
 *.db
 *.sqlite
 *.sqlite3
@@ -55,7 +84,30 @@ Thumbs.db
 # Temporary files
 *.tmp
 *.temp
+*.bak
+*.swp
+tmp/
+temp/
 
 # Project-specific
 indexes/
-config.local.json 
+config.json
+config.local.json
+
+# Documentation
+docs/_build/
+site/
+
+# Jupyter Notebook
+.ipynb_checkpoints
+
+# pyenv
+.python-version
+
+# Installer logs
+pip-log.txt
+pip-delete-this-directory.txt
+
+# Unit test / coverage reports
+nosetests.xml
+test-results/
