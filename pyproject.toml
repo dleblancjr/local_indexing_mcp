@@ -1,0 +1,7 @@
+[project]
+name = "local-indexing-mcp"
+version = "0.1.0"
+description = "A MCP lightweight text indexing and semantic search engine."
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = []

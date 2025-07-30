@@ -1,2 +1,2 @@
 # local_indexing_mcp
-Raw local file vector indexing
+A MCP lightweight text indexing and semantic search engine.
