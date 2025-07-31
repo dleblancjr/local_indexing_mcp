@@ -1,0 +1,63 @@
+Python Programming Tutorial
+
+Introduction to Python
+Python is a high-level, interpreted programming language known for its simplicity and readability. 
+It was created by Guido van Rossum and first released in 1991.
+
+Basic Syntax
+Python uses indentation to define code blocks, making it very readable:
+
+def greet(name):
+    return f"Hello, {name}!"
+
+print(greet("World"))
+
+Variables and Data Types
+Python supports several data types:
+- Integers: whole numbers like 42
+- Floats: decimal numbers like 3.14
+- Strings: text like "Hello World"
+- Lists: ordered collections like [1, 2, 3]
+- Dictionaries: key-value pairs like {"name": "Alice", "age": 30}
+
+Functions
+Functions are reusable blocks of code:
+
+def calculate_area(radius):
+    pi = 3.14159
+    return pi * radius * radius
+
+area = calculate_area(5)
+print(f"The area is {area}")
+
+Control Flow
+Python supports if statements, loops, and more:
+
+for i in range(5):
+    if i % 2 == 0:
+        print(f"{i} is even")
+    else:
+        print(f"{i} is odd")
+
+Classes and Objects
+Python supports object-oriented programming:
+
+class Person:
+    def __init__(self, name, age):
+        self.name = name
+        self.age = age
+    
+    def introduce(self):
+        return f"Hi, I'm {self.name} and I'm {self.age} years old"
+
+person = Person("Alice", 25)
+print(person.introduce())
+
+Libraries and Modules
+Python has a rich ecosystem of libraries:
+- requests: for HTTP requests
+- pandas: for data analysis
+- numpy: for numerical computing
+- matplotlib: for plotting and visualization
+
+This concludes our basic Python tutorial. Happy coding!

@@ -18,7 +18,7 @@ from src.models import IndexStats
 
 # Configure logging
 logging.basicConfig(
-    level=logging.INFO,
+    level=logging.DEBUG,
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
 )
 logger = logging.getLogger(__name__)
@@ -29,9 +29,33 @@ search_engine: Optional[SearchEngine] = None
 db: Optional[Database] = None
 config = None
 background_task = None
+_initialized = False
+_test_mode = False  # Disable lazy initialization during tests
 
 # Create FastMCP server
 mcp = FastMCP("local-indexing-mcp")
+
+
+async def ensure_initialized() -> None:
+    """
+    Ensure server is initialized before handling requests.
+    
+    Checks if the server is already initialized and initializes it if needed.
+    Respects test mode to avoid re-initialization during testing.
+    
+    Args:
+        None
+        
+    Returns:
+        None
+        
+    Raises:
+        Exception: If server initialization fails
+    """
+    global _initialized, _test_mode
+    if not _test_mode and not _initialized:
+        await initialize_server()
+        _initialized = True
 
 
 @mcp.tool()
@@ -46,8 +70,10 @@ async def search(query: str, limit: int = 10) -> str:
     Returns:
         Search results as formatted string
     """
+    await ensure_initialized()
     global search_engine
     
+    # Check for proper initialization (especially in test mode)
     if not search_engine:
         return "Error: Server not properly initialized"
     
@@ -80,8 +106,10 @@ async def get_index_stats() -> str:
     Returns:
         Index statistics as formatted string
     """
+    await ensure_initialized()
     global search_engine, db, config
     
+    # Check for proper initialization (especially in test mode)
     if not search_engine or not db:
         return "Error: Server not properly initialized"
     
@@ -147,8 +175,10 @@ async def refresh_index(filepath: Optional[str] = None, force: bool = False) -> 
     Returns:
         Detailed refresh result as formatted string
     """
+    await ensure_initialized()
     global indexer
     
+    # Check for proper initialization (especially in test mode)
     if not indexer:
         return "Error: Server not properly initialized"
     
@@ -264,23 +294,13 @@ async def shutdown():
             pass
 
 
-async def main():
-    """Main entry point for the MCP server."""
+if __name__ == "__main__":
     try:
-        # Initialize server components
-        await initialize_server()
-        
         # Run the FastMCP server with stdio transport
-        await mcp.run(transport="stdio")
-        
+        # Initialization happens lazily when first tool is called
+        asyncio.run(mcp.run(transport="stdio"))
     except KeyboardInterrupt:
         logger.info("Server stopped by user")
     except Exception as e:
         logger.error(f"Server error: {e}")
         sys.exit(1)
-    finally:
-        await shutdown()
-
-
-if __name__ == "__main__":
-    asyncio.run(main())
