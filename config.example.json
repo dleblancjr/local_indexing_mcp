@@ -1,8 +1,0 @@
-{
-  "source_directory": "/path/to/documents",
-  "index_output_directory": "./indexes",
-  "included_extensions": [".txt", ".md", ".rst", ".rtf", ".docx", ".csv", ".config", ".json", ".yaml", ".yml", ".ini"],
-  "excluded_extensions": [],
-  "scan_interval_seconds": 300,
-  "max_file_size_mb": 10
-}

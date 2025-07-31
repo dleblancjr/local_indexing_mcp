@@ -201,3 +201,94 @@ class TestDatabaseOperations:
             # Document with more occurrences should rank higher (more negative score)
             assert results[0]['path'] == '/doc2.txt'
             assert results[1]['path'] == '/doc1.txt'
+
+
+class TestDatabaseErrorScenarios:
+    """Test error handling scenarios in database operations."""
+
+    def test_wal_shm_file_cleanup(self, temp_dir):
+        """Test WAL and SHM file cleanup during database removal."""
+        db_path = temp_dir / "test.db"
+        db = Database(db_path)
+        
+        # Create fake WAL and SHM files
+        wal_path = Path(str(db_path) + "-wal")
+        shm_path = Path(str(db_path) + "-shm")
+        wal_path.write_text("fake wal")
+        shm_path.write_text("fake shm")
+        
+        # Remove database files - should clean up WAL/SHM
+        db._remove_database_files()
+        
+        assert not wal_path.exists()
+        assert not shm_path.exists()
+
+    def test_database_validation_small_file(self, temp_dir):
+        """Test database validation with file too small to be valid."""
+        db_path = temp_dir / "small.db"
+        # Create a file smaller than MIN_SQLITE_FILE_SIZE
+        db_path.write_bytes(b"small")
+        
+        # Test validation directly without constructor
+        db = object.__new__(Database)  # Create instance without calling __init__
+        db.db_path = db_path
+        assert not db._validate_existing_database()
+
+    def test_database_validation_invalid_header(self, temp_dir):
+        """Test database validation with invalid SQLite header."""
+        db_path = temp_dir / "invalid.db"
+        # Create a file with invalid SQLite header
+        db_path.write_bytes(b"Invalid SQLite header" + b"\x00" * 100)
+        
+        # Test validation directly without constructor
+        db = object.__new__(Database)  # Create instance without calling __init__
+        db.db_path = db_path
+        assert not db._validate_existing_database()
+
+    def test_database_validation_permission_error(self, temp_dir):
+        """Test database validation with permission errors."""
+        db_path = temp_dir / "restricted.db"
+        db_path.write_bytes(b"SQLite format 3\x00" + b"\x00" * 100)
+        
+        # Make file unreadable
+        db_path.chmod(0o000)
+        
+        # Test validation directly without constructor  
+        db = object.__new__(Database)  # Create instance without calling __init__
+        db.db_path = db_path
+        try:
+            result = db._validate_existing_database()
+            assert not result
+        finally:
+            # Restore permissions for cleanup
+            db_path.chmod(0o644)
+
+    def test_corrupted_database_recovery(self, temp_dir):
+        """Test that corrupted database is automatically recovered."""
+        db_path = temp_dir / "corrupted.db"
+        # Create file with SQLite header but corrupted content
+        db_path.write_bytes(b"SQLite format 3\x00" + b"corrupted data" * 50)
+        
+        # Constructor should detect corruption and recreate database
+        db = Database(db_path)
+        
+        # Should work after recovery
+        with db.get_connection() as conn:
+            cursor = conn.execute("SELECT 1")
+            assert cursor.fetchone()[0] == 1
+
+    def test_database_connection_operational_error(self, temp_dir, monkeypatch):
+        """Test connection error handling by mocking an OperationalError."""
+        db_path = temp_dir / "test.db"
+        db = Database(db_path)  # Create valid database
+        
+        # Mock sqlite3.connect to raise OperationalError
+        def mock_connect(*args, **kwargs):
+            raise sqlite3.OperationalError("file is not a database")
+        
+        monkeypatch.setattr("sqlite3.connect", mock_connect)
+        
+        # This should catch the OperationalError and convert to IndexCorruptionError
+        with pytest.raises(IndexCorruptionError, match="Database error"):
+            with db.get_connection():
+                pass
