@@ -28,6 +28,9 @@ BINARY_SIGNATURES = [
     b'\x25\x50\x44\x46',  # PDF
 ]
 
+# File reading constants
+FILE_TYPE_CHECK_CHUNK_SIZE = 8192  # Read 8KB for file type detection
+
 
 def is_text_file(filepath: Path, check_content: bool = True) -> bool:
     """
@@ -54,7 +57,7 @@ def is_text_file(filepath: Path, check_content: bool = True) -> bool:
     # Check file content
     try:
         with open(filepath, 'rb') as f:
-            chunk = f.read(8192)  # Read first 8KB
+            chunk = f.read(FILE_TYPE_CHECK_CHUNK_SIZE)  # Read first 8KB
             return _is_text_content(chunk, filepath)
             
     except OSError as e:

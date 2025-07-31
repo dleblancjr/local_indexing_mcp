@@ -1,6 +1,7 @@
 """SQLite database operations and schema management."""
 import logging
 import sqlite3
+import time
 from contextlib import contextmanager
 from pathlib import Path
 from typing import Generator, Optional
@@ -8,6 +9,11 @@ from typing import Generator, Optional
 from .exceptions import IndexCorruptionError
 
 logger = logging.getLogger(__name__)
+
+# Constants for database validation and operations
+MIN_SQLITE_FILE_SIZE = 100  # Minimum bytes for a valid SQLite file
+SQLITE_HEADER_SIGNATURE = b'SQLite format 3\x00'  # Standard SQLite file header
+DB_CREATION_DELAY = 0.1  # Delay in seconds after file deletion
 
 
 SCHEMA_SQL = """
@@ -111,7 +117,7 @@ class Database:
         # First, check if it's a reasonable size for a SQLite database
         try:
             file_size = self.db_path.stat().st_size
-            if file_size < 100:  # SQLite databases have headers
+            if file_size < MIN_SQLITE_FILE_SIZE:  # SQLite databases have headers
                 logger.debug(
                     f"Database file too small to be valid",
                     extra={"db_path": str(self.db_path), "size": file_size}
@@ -128,7 +134,7 @@ class Database:
         try:
             with open(self.db_path, 'rb') as f:
                 header = f.read(16)
-                if header != b'SQLite format 3\x00':
+                if header != SQLITE_HEADER_SIGNATURE:
                     logger.debug(
                         f"Invalid SQLite header",
                         extra={"db_path": str(self.db_path)}
@@ -191,8 +197,7 @@ class Database:
             self._remove_database_files()
             
             # Small delay to ensure file system has completed deletion
-            import time
-            time.sleep(0.1)
+            time.sleep(DB_CREATION_DELAY)
         
         conn: Optional[sqlite3.Connection] = None
         try:
