@@ -1,25 +1,21 @@
 #!/usr/bin/env python3
 """
-Simple MCP Demo for Local Indexing MCP Server
+Simple MCP client demo for local indexing server.
 
-This demo shows the Local Indexing MCP Server functionality by directly
-importing and using the server components, avoiding complex protocol issues.
-
-To run this demo:
-1. Make sure you're in the project root directory
-2. Run: python client_demo/simple_demo.py
+This demo showcases how to interact with the local indexing MCP server
+using the MCP protocol. It demonstrates all available tools: search,
+get_index_stats, and refresh_index.
 """
 
 import asyncio
 import logging
 import sys
-import traceback
 from pathlib import Path
-from typing import Any, List
+from typing import Dict, List, Any, Optional
+from contextlib import AsyncExitStack
 
-# Add client_demo to path for imports
-sys.path.insert(0, str(Path(__file__).parent))
-from config_manager import ConfigError, setup_demo_config, restore_config, validate_demo_paths
+from mcp import ClientSession, StdioServerParameters
+from mcp.client.stdio import stdio_client
 
 # Configure logging
 logging.basicConfig(
@@ -29,324 +25,356 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 # Constants
-DEFAULT_SEARCH_LIMIT = 3
-SEARCH_QUERIES = [
-    "python",
-    "machine learning", 
-    "function",
-    "class",
-    "fibonacci"
-]
+SERVER_COMMAND = [sys.executable, "../main.py"]
+DEFAULT_SEARCH_LIMIT = 5
 
 
-class DemoError(Exception):
-    """Custom exception for demo-related errors."""
+class MCPClientError(Exception):
+    """Custom exception for MCP client-related errors."""
     pass
 
 
-async def initialize_mcp_server() -> None:
+class LocalIndexingClient:
     """
-    Initialize the MCP server for demo use.
+    Simple MCP client for the local indexing server.
     
-    Raises:
-        DemoError: If server initialization fails
+    Provides methods to interact with the server's search, statistics,
+    and indexing capabilities through the MCP protocol.
     """
-    try:
-        from main import initialize_server
-        import main
-        
-        # Set test mode to avoid background tasks
-        main._test_mode = True
-        
-        # Initialize the server
-        await initialize_server()
-        logger.info("MCP server initialized successfully")
-        
-    except ImportError as e:
-        logger.error(f"Failed to import MCP server components: {e}")
-        raise DemoError("Cannot import MCP server - ensure you're in project root") from e
-    except Exception as e:
-        logger.error(f"Server initialization failed: {e}")
-        raise DemoError(f"Server initialization failed: {e}") from e
-
-
-async def call_search_tool(query: str, limit: int = DEFAULT_SEARCH_LIMIT) -> str:
-    """
-    Call the search tool with specified parameters.
     
-    Args:
-        query: Search query string
-        limit: Maximum number of results to return
-        
-    Returns:
-        Search results as formatted string
-        
-    Raises:
-        DemoError: If search operation fails
-    """
-    try:
-        from main import search
-        return await search(query, limit)
-    except Exception as e:
-        logger.error(f"Search failed for query '{query}': {e}")
-        raise DemoError(f"Search operation failed: {e}") from e
-
-
-async def call_stats_tool() -> str:
-    """
-    Call the index statistics tool.
+    def __init__(self) -> None:
+        """Initialize the client."""
+        self.session: Optional[ClientSession] = None
+        self.exit_stack = AsyncExitStack()
+        self._connected = False
     
-    Returns:
-        Index statistics as formatted string
+    async def connect(self) -> None:
+        """
+        Connect to the MCP server.
         
-    Raises:
-        DemoError: If stats operation fails
-    """
-    try:
-        from main import get_index_stats
-        return await get_index_stats()
-    except Exception as e:
-        logger.error(f"Stats operation failed: {e}")
-        raise DemoError(f"Stats operation failed: {e}") from e
-
-
-async def call_refresh_tool(filepath: str = None, force: bool = False) -> str:
-    """
-    Call the index refresh tool.
-    
-    Args:
-        filepath: Optional specific file to refresh
-        force: Whether to force refresh all files
-        
-    Returns:
-        Refresh results as formatted string
-        
-    Raises:
-        DemoError: If refresh operation fails
-    """
-    try:
-        from main import refresh_index
-        return await refresh_index(filepath, force)
-    except Exception as e:
-        logger.error(f"Refresh operation failed: {e}")
-        raise DemoError(f"Refresh operation failed: {e}") from e
-
-
-async def demonstrate_search() -> None:
-    """
-    Demonstrate the search functionality with various queries.
-    
-    Raises:
-        DemoError: If search demonstration fails
-    """
-    print("🔍 === SEARCH DEMONSTRATION ===")
-    
-    for query in SEARCH_QUERIES:
-        print(f"\n🔍 Searching for: '{query}'")
-        print("-" * 50)
+        Raises:
+            MCPClientError: If connection fails
+        """
         try:
-            result = await call_search_tool(query, DEFAULT_SEARCH_LIMIT)
-            print(result)
-        except DemoError as e:
-            print(f"❌ Search failed: {e}")
-
-
-async def demonstrate_index_stats() -> None:
-    """
-    Demonstrate getting index statistics.
+            logger.info("Connecting to MCP server...")
+            
+            # Create server parameters
+            server_params = StdioServerParameters(
+                command=SERVER_COMMAND[0],
+                args=SERVER_COMMAND[1:],
+                env=None
+            )
+            
+            # Connect using proper async context manager pattern
+            stdio_transport = await self.exit_stack.enter_async_context(
+                stdio_client(server_params)
+            )
+            read_stream, write_stream = stdio_transport
+            
+            # Create and initialize session
+            self.session = await self.exit_stack.enter_async_context(
+                ClientSession(read_stream, write_stream)
+            )
+            await self.session.initialize()
+            
+            self._connected = True
+            logger.info("Successfully connected to MCP server")
+            
+        except Exception as e:
+            logger.error(f"Failed to connect to MCP server: {e}")
+            raise MCPClientError(f"Connection failed: {e}") from e
     
-    Raises:
-        DemoError: If stats demonstration fails
-    """
-    print("\n📊 === INDEX STATISTICS ===")
-    print("-" * 50)
-    try:
-        result = await call_stats_tool()
-        print(result)
-    except DemoError as e:
-        print(f"❌ Stats failed: {e}")
-
-
-async def demonstrate_refresh_index() -> None:
-    """
-    Demonstrate refreshing the index.
-    
-    Raises:
-        DemoError: If refresh demonstration fails
-    """
-    print("\n🔄 === INDEX REFRESH ===")
-    print("-" * 50)
-    try:
-        result = await call_refresh_tool(force=True)
-        print(result)
-    except DemoError as e:
-        print(f"❌ Refresh failed: {e}")
-
-
-async def create_test_file_and_search() -> None:
-    """
-    Create a test file, index it, and search for unique content.
-    
-    Demonstrates real-time indexing capabilities by creating a temporary
-    file with unique keywords, indexing it, and searching for the content.
-    """
-    print("\n📝 === DYNAMIC INDEXING TEST ===")
-    
-    test_file = Path("client_demo/sample_documents/dynamic_test.txt")
-    test_content = """
-This is a dynamically created test file for the MCP demo.
-It contains unique keywords like: UNIQUEWORD123 and TESTCONTENT456.
-This file was created to demonstrate real-time indexing capabilities.
-"""
-    
-    try:
-        print("Creating new test file...")
-        test_file.write_text(test_content)
-        logger.info(f"Created test file: {test_file}")
-        
-        print("Refreshing index to include new file...")
-        refresh_result = await call_refresh_tool()
-        print(refresh_result)
-        
-        print("\nSearching for unique keyword from new file...")
-        search_result = await call_search_tool("UNIQUEWORD123", limit=2)
-        print(search_result)
-        
-    except DemoError as e:
-        print(f"❌ Dynamic indexing test failed: {e}")
-        logger.error(f"Dynamic indexing test failed: {e}")
-    except (OSError, IOError) as e:
-        print(f"❌ File operation failed: {e}")
-        logger.error(f"File operation failed: {e}")
-    finally:
-        # Clean up test file
-        if test_file.exists():
+    async def disconnect(self) -> None:
+        """Disconnect from the MCP server."""
+        if self._connected:
             try:
-                test_file.unlink()
-                print(f"\n✅ Cleaned up test file: {test_file}")
-                logger.info(f"Cleaned up test file: {test_file}")
-            except OSError as e:
-                print(f"⚠️  Failed to clean up test file: {e}")
-                logger.warning(f"Failed to clean up test file: {e}")
-
-
-def print_welcome() -> None:
-    """Print welcome message and demo information."""
-    welcome_lines = [
-        "=" * 60,
-        "🚀 LOCAL INDEXING MCP SERVER DEMO", 
-        "=" * 60,
-        "",
-        "This demo showcases the Local Indexing MCP Server functionality:",
-        "• Full-text search across indexed documents",
-        "• Index statistics and monitoring", 
-        "• Dynamic index refresh capabilities",
-        "• Real-time file indexing",
-        "",
-        "Demo files located in: client_demo/sample_documents/",
-        "Configuration: client_demo/demo_config.json",
-        ""
-    ]
-    print("\n".join(welcome_lines))
-
-
-def print_conclusion() -> None:
-    """Print conclusion message with demo summary and next steps."""
-    conclusion_lines = [
-        "\n" + "=" * 60,
-        "✅ DEMO COMPLETED SUCCESSFULLY!",
-        "=" * 60,
-        "",
-        "What you've seen:",
-        "• Search functionality across multiple file types",
-        "• Index statistics and performance metrics",
-        "• Automatic file change detection and indexing", 
-        "• Real-time search of newly added content",
-        "",
-        "Next steps:",
-        "• Modify client_demo/demo_config.json to index your own files",
-        "• Add more documents to client_demo/sample_documents/",
-        "• Integrate the MCP server into your own applications",
-        "• Explore advanced search syntax (boolean operators, phrases)",
-        ""
-    ]
-    print("\n".join(conclusion_lines))
-
-
-async def run_demo_sequence() -> None:
-    """
-    Run the complete demo sequence.
+                await self.exit_stack.aclose()
+                self._connected = False
+                self.session = None
+                logger.info("Disconnected from MCP server")
+            except Exception as e:
+                logger.error(f"Error during disconnect: {e}")
     
-    Raises:
-        DemoError: If any demo step fails
-    """
-    await demonstrate_index_stats()
-    await demonstrate_search()
-    await demonstrate_refresh_index()
-    await create_test_file_and_search()
+    def _ensure_connected(self) -> None:
+        """
+        Ensure client is connected to server.
+        
+        Raises:
+            MCPClientError: If not connected
+        """
+        if not self._connected or not self.session:
+            raise MCPClientError("Client not connected. Call connect() first.")
+    
+    async def search(self, query: str, limit: int = DEFAULT_SEARCH_LIMIT) -> str:
+        """
+        Search indexed content.
+        
+        Args:
+            query: Search query string
+            limit: Maximum number of results
+            
+        Returns:
+            Search results as formatted string
+            
+        Raises:
+            MCPClientError: If search fails
+        """
+        self._ensure_connected()
+        
+        try:
+            logger.info(f"Searching for: '{query}' (limit: {limit})")
+            
+            result = await self.session.call_tool("search", {
+                "query": query,
+                "limit": limit
+            })
+            
+            if result.isError:
+                raise MCPClientError(f"Search failed: {result.content}")
+            
+            return result.content[0].text if result.content else "No results"
+            
+        except Exception as e:
+            logger.error(f"Search error: {e}")
+            raise MCPClientError(f"Search failed: {e}") from e
+    
+    async def get_index_stats(self) -> str:
+        """
+        Get index statistics.
+        
+        Returns:
+            Index statistics as formatted string
+            
+        Raises:
+            MCPClientError: If stats retrieval fails
+        """
+        self._ensure_connected()
+        
+        try:
+            logger.info("Retrieving index statistics...")
+            
+            result = await self.session.call_tool("get_index_stats", {})
+            
+            if result.isError:
+                raise MCPClientError(f"Stats retrieval failed: {result.content}")
+            
+            return result.content[0].text if result.content else "No stats available"
+            
+        except Exception as e:
+            logger.error(f"Stats error: {e}")
+            raise MCPClientError(f"Stats retrieval failed: {e}") from e
+    
+    async def refresh_index(
+        self, 
+        filepath: Optional[str] = None, 
+        force: bool = False
+    ) -> str:
+        """
+        Refresh the index.
+        
+        Args:
+            filepath: Optional specific file to refresh
+            force: If True, force refresh all files
+            
+        Returns:
+            Refresh results as formatted string
+            
+        Raises:
+            MCPClientError: If refresh fails
+        """
+        self._ensure_connected()
+        
+        try:
+            args = {"force": force}
+            if filepath:
+                args["filepath"] = filepath
+                
+            action = f"Refreshing index for '{filepath}'" if filepath else "Refreshing entire index"
+            if force:
+                action += " (forced)"
+                
+            logger.info(action)
+            
+            result = await self.session.call_tool("refresh_index", args)
+            
+            if result.isError:
+                raise MCPClientError(f"Index refresh failed: {result.content}")
+            
+            return result.content[0].text if result.content else "Refresh completed"
+            
+        except Exception as e:
+            logger.error(f"Refresh error: {e}")
+            raise MCPClientError(f"Index refresh failed: {e}") from e
 
 
-async def main() -> None:
+async def run_demo() -> None:
     """
-    Main demo function with comprehensive error handling.
+    Run the MCP client demo.
     
-    Sets up configuration, validates environment, runs demo sequence,
-    and ensures proper cleanup.
+    Demonstrates all available server capabilities with example usage.
     """
-    print_welcome()
+    client = LocalIndexingClient()
     
-    config_set = False
     try:
-        # Validate demo environment
-        success, message = validate_demo_paths()
-        if not success:
-            print(f"❌ Environment validation failed: {message}")
-            return
+        # Connect to server
+        await client.connect()
         
-        # Set up demo configuration
-        config_set = setup_demo_config()
-        if not config_set:
-            print("❌ Demo configuration setup failed!")
-            print("Please ensure client_demo/demo_config.json exists.")
-            return
+        print("=== MCP Local Indexing Client Demo ===\n")
         
-        # Add current directory to Python path for imports
-        current_dir = Path.cwd()
-        if str(current_dir) not in sys.path:
-            sys.path.insert(0, str(current_dir))
+        # 1. Get index statistics
+        print("1. Getting index statistics...")
+        stats = await client.get_index_stats()
+        print(f"Stats:\n{stats}\n")
         
-        # Initialize server
-        await initialize_mcp_server()
+        # 2. Refresh index to ensure we have recent data
+        print("2. Refreshing index...")
+        refresh_result = await client.refresh_index()
+        print(f"Refresh Result:\n{refresh_result}\n")
         
-        # Run demo sequence
-        await run_demo_sequence()
+        # 3. Perform some example searches
+        search_queries = [
+            "function",
+            "class",
+            "import",
+            "config",
+            "error"
+        ]
         
-        print_conclusion()
+        print("3. Performing example searches...")
+        for query in search_queries:
+            try:
+                print(f"\nSearching for '{query}':")
+                search_result = await client.search(query, limit=3)
+                print(search_result)
+            except MCPClientError as e:
+                print(f"Search failed: {e}")
+        
+        # 4. Get final statistics
+        print("\n4. Final index statistics...")
+        final_stats = await client.get_index_stats()
+        print(f"Final Stats:\n{final_stats}")
+        
+        print("\n=== Demo Complete ===")
+        
+    except MCPClientError as e:
+        logger.error(f"Demo failed: {e}")
+        print(f"Demo failed: {e}")
         
     except KeyboardInterrupt:
-        print("\n⚠️  Demo interrupted by user")
-        logger.info("Demo interrupted by user")
-    except (ConfigError, DemoError) as e:
-        print(f"\n❌ Demo failed: {e}")
-        logger.error(f"Demo failed: {e}")
+        print("\nDemo interrupted by user")
+        
     except Exception as e:
-        print(f"\n❌ Unexpected error: {e}")
         logger.error(f"Unexpected error: {e}")
-        print("\nFull error traceback:")
-        traceback.print_exc()
-        print("\nPlease check that:")
-        print("• Python dependencies are installed (pip install -e .)")
-        print("• You're running from the project root directory")
-        print("• The MCP server main.py file is accessible")
+        print(f"Unexpected error: {e}")
+        
     finally:
-        # Restore original configuration
-        if config_set:
+        # Ensure cleanup
+        await client.disconnect()
+
+
+async def interactive_demo() -> None:
+    """
+    Run an interactive demo where users can enter their own commands.
+    """
+    client = LocalIndexingClient()
+    
+    try:
+        await client.connect()
+        
+        print("=== Interactive MCP Client Demo ===")
+        print("Available commands:")
+        print("  search <query> [limit] - Search for content")
+        print("  stats                  - Get index statistics")
+        print("  refresh [filepath]     - Refresh index")
+        print("  refresh --force        - Force refresh entire index")
+        print("  help                   - Show this help")
+        print("  quit                   - Exit demo")
+        print()
+        
+        while True:
             try:
-                restore_config()
-            except ConfigError as e:
-                print(f"⚠️  Failed to restore configuration: {e}")
-                logger.warning(f"Failed to restore configuration: {e}")
+                command = input("> ").strip()
+                
+                if not command:
+                    continue
+                    
+                parts = command.split()
+                cmd = parts[0].lower()
+                
+                if cmd == "quit":
+                    break
+                    
+                elif cmd == "help":
+                    print("Available commands:")
+                    print("  search <query> [limit] - Search for content")
+                    print("  stats                  - Get index statistics")
+                    print("  refresh [filepath]     - Refresh index")
+                    print("  refresh --force        - Force refresh entire index")
+                    print("  help                   - Show this help")
+                    print("  quit                   - Exit demo")
+                    
+                elif cmd == "search":
+                    if len(parts) < 2:
+                        print("Usage: search <query> [limit]")
+                        continue
+                        
+                    query = " ".join(parts[1:])
+                    limit = DEFAULT_SEARCH_LIMIT
+                    
+                    # Check if last part is a number (limit)
+                    try:
+                        if parts[-1].isdigit():
+                            limit = int(parts[-1])
+                            query = " ".join(parts[1:-1])
+                    except (ValueError, IndexError):
+                        pass
+                    
+                    result = await client.search(query, limit)
+                    print(result)
+                    
+                elif cmd == "stats":
+                    result = await client.get_index_stats()
+                    print(result)
+                    
+                elif cmd == "refresh":
+                    filepath = None
+                    force = False
+                    
+                    if len(parts) > 1:
+                        if parts[1] == "--force":
+                            force = True
+                        else:
+                            filepath = parts[1]
+                    
+                    result = await client.refresh_index(filepath, force)
+                    print(result)
+                    
+                else:
+                    print(f"Unknown command: {cmd}. Type 'help' for available commands.")
+                    
+            except KeyboardInterrupt:
+                print("\nUse 'quit' to exit")
+                
+            except MCPClientError as e:
+                print(f"Error: {e}")
+                
+            except Exception as e:
+                print(f"Unexpected error: {e}")
+                logger.error(f"Interactive demo error: {e}")
+    
+    finally:
+        await client.disconnect()
+
+
+def main() -> None:
+    """Main entry point for the demo."""
+    if len(sys.argv) > 1 and sys.argv[1] == "--interactive":
+        print("Starting interactive demo...")
+        asyncio.run(interactive_demo())
+    else:
+        print("Starting automated demo...")
+        asyncio.run(run_demo())
 
 
 if __name__ == "__main__":
-    asyncio.run(main())
+    main()

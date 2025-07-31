@@ -1,0 +1,57 @@
+Personal Notes - MCP Demo Content
+
+== Configuration Notes ==
+The MCP server requires a config.json file with the following structure:
+- source_directory: Path to documents to index
+- index_output_directory: Where to store the search index
+- included_extensions: File types to include (.txt, .md, .py)
+- excluded_extensions: File types to skip (.pyc, .pyo)
+- scan_interval_seconds: How often to check for changes
+- max_file_size_mb: Maximum file size to index
+
+== Search Tips ==
+When searching through indexed content:
+1. Use specific terms for better results
+2. Boolean operators work: AND, OR, NOT
+3. Phrase searches use quotes: "exact phrase"
+4. Case-insensitive by default
+5. Stemming and fuzzy matching available
+
+== Common Use Cases ==
+- Code documentation search
+- Project file organization
+- Knowledge base queries
+- Research note retrieval
+- Configuration reference lookup
+
+== Best Practices ==
+* Keep files organized in logical directories
+* Use meaningful file names
+* Include descriptive comments in code
+* Regular index refresh for new content
+* Monitor index size and performance
+
+== Troubleshooting ==
+Problem: No search results
+Solution: Check if files are in included_extensions
+
+Problem: Slow search performance  
+Solution: Reduce max_file_size_mb or optimize content
+
+Problem: Index not updating
+Solution: Force refresh or check scan_interval_seconds
+
+== Technical Details ==
+The MCP server uses SQLite FTS5 for full-text search with the following features:
+- Tokenization and stemming
+- Relevance scoring
+- Snippet generation
+- Multi-term queries
+- Performance optimizations
+
+Database schema includes:
+- file_metadata table for tracking files
+- search index for content lookup  
+- error logging for debugging
+
+Remember to backup index files before major changes!

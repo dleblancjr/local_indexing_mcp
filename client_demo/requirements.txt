@@ -1,0 +1,10 @@
+# MCP Local Indexing Client Demo Requirements
+# 
+# These are the minimum dependencies needed to run the client demo.
+# The MCP library provides the client-side protocol implementation.
+
+# MCP (Model Context Protocol) client library
+mcp>=1.0.0
+
+# Note: Additional dependencies may be inherited from the parent project
+# but this demo only directly requires the MCP library for client functionality.

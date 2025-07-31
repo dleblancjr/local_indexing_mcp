@@ -1,268 +1,193 @@
-# Local Indexing MCP Server Demo
+# MCP Local Indexing Client Demo
 
-This directory contains a complete demonstration of the Local Indexing MCP Server functionality. The demo showcases how to use the MCP server for full-text search, index management, and real-time file indexing.
+A simple demonstration client for the local indexing MCP server. This demo showcases how to communicate with the MCP server using the Model Context Protocol to perform text indexing and search operations.
 
-## Demo Contents
+## Features
 
-```
-client_demo/
-├── README.md                    # This file
-├── demo_config.json            # Demo configuration 
-├── simple_demo.py              # Main demo script
-└── sample_documents/           # Sample files to index
-    ├── README.md               # Demo documentation
-    ├── python_tutorial.txt     # Python programming content
-    ├── machine_learning.md     # ML concepts and algorithms
-    └── sample_code.py          # Example Python code
-```
-
-## What the Demo Shows
-
-### 🔍 Search Functionality
-- Full-text search across multiple file types (.txt, .md, .py)
-- Relevance scoring and result ranking
-- Search result snippets with context
-- Support for various search queries
-
-### 📊 Index Statistics
-- Number of indexed files
-- Index size and performance metrics
-- Last scan timestamp
-- Error reporting and monitoring
-
-### 🔄 Dynamic Indexing
-- Automatic file change detection
-- Manual index refresh capabilities
-- Real-time indexing of new files
-- Cleanup and maintenance operations
-
-### 📝 Real-time Updates
-- Creation of new test files
-- Immediate indexing and search
-- Demonstration of live file monitoring
+- **Search**: Full-text search across indexed content
+- **Index Statistics**: Get detailed information about the current index
+- **Index Refresh**: Trigger manual re-indexing of files
+- **Interactive Mode**: Command-line interface for real-time interaction
+- **Automated Demo**: Pre-built demonstration of all features
 
 ## Prerequisites
 
-1. **Python 3.8+** with required dependencies installed:
+1. **Python 3.10+**: Ensure you have Python 3.10 or later installed
+2. **MCP Server**: The local indexing MCP server must be available in the parent directory
+3. **Dependencies**: Install required packages (see Installation section)
+
+## Installation
+
+1. **Install dependencies**:
    ```bash
-   pip install -e .
+   pip install mcp>=1.0.0
    ```
 
-2. **Project structure** - Run from the project root directory where `main.py` is located
+2. **Ensure server is configured**:
+   - Make sure `../main.py` exists (the MCP server)
+   - Verify `../config.json` is properly configured
+   - The server should have indexed content to search
 
-3. **Demo files** - The demo will use the pre-created sample documents
+## Usage
 
-## Running the Demo
+### Automated Demo
 
-### Option 1: Simple Direct Demo (Recommended)
-
-From the project root directory, run:
-
-```bash
-python client_demo/simple_demo.py
-```
-
-This demo directly imports and uses the MCP server components, avoiding protocol complexity.
-
-### Option 2: MCP Inspector (Professional Testing)
-
-For a more thorough test using the official MCP development tools:
+Run the pre-built demonstration that showcases all features:
 
 ```bash
-python client_demo/mcp_inspector_demo.py
+cd client_demo
+python simple_demo.py
 ```
 
-This launches the MCP Inspector, which provides a web-based interface for testing all MCP functionality. This is the recommended way to test MCP servers during development.
+This will:
+1. Connect to the MCP server
+2. Display current index statistics
+3. Refresh the index
+4. Perform several example searches
+5. Show final statistics
 
-### Option 3: Manual MCP Inspector
+### Interactive Mode
 
-If you have the MCP SDK installed (`pip install mcp`):
+For hands-on exploration, use interactive mode:
 
 ```bash
-# From the project root directory
-python -m mcp dev main.py
+cd client_demo
+python simple_demo.py --interactive
 ```
 
-This opens the MCP Inspector in your browser for interactive testing.
+Available commands in interactive mode:
 
-### What You'll See
+- `search <query> [limit]` - Search for content (optional limit, default: 5)
+- `stats` - Get current index statistics
+- `refresh [filepath]` - Refresh index (optionally for specific file)
+- `refresh --force` - Force refresh entire index
+- `help` - Show available commands
+- `quit` - Exit the demo
 
-The demo will automatically:
-
-1. **Initialize** - Check configuration and sample files
-2. **Show Index Stats** - Display current index information
-3. **Demonstrate Search** - Run several search queries:
-   - `"python"` - Find Python-related content
-   - `"machine learning"` - Find ML concepts
-   - `"function"` - Find programming constructs
-   - `"class"` - Find OOP content  
-   - `"fibonacci"` - Find specific algorithms
-4. **Refresh Index** - Force a complete re-indexing
-5. **Dynamic Test** - Create, index, and search a new file
-6. **Cleanup** - Remove test files
-
-### Expected Output
+### Example Interactive Session
 
 ```
-============================================================
-🚀 LOCAL INDEXING MCP SERVER DEMO
-============================================================
-
-📊 === INDEX STATISTICS ===
---------------------------------------------------
+> stats
 Index Statistics:
-- Indexed Files: 4
-- Last Scan: 2024-01-15T10:30:45
-- Index Size: 0.15 MB
-- Total Documents: 4
+- Indexed Files: 42
+- Last Scan: 2024-01-15T10:30:00
+- Index Size: 2.3 MB
+- Total Documents: 42
 - Errors Encountered: 0
 
-🔍 === SEARCH DEMONSTRATION ===
+> search function 3
+Found 3 results for 'function':
 
-🔍 Searching for: 'python'
---------------------------------------------------
-Found 3 results for 'python':
+1. src/indexer.py
+   Score: 0.95
+   Modified: 2024-01-15T09:15:00
+   Snippet: def index_file(self, filepath: Path) -> bool: ...
 
-1. client_demo/sample_documents/python_tutorial.txt
-   Score: 2.85
-   Modified: 2024-01-15T10:25:30
-   Snippet: Python Programming Tutorial...
+2. src/search.py
+   Score: 0.87
+   Modified: 2024-01-15T09:10:00
+   Snippet: def search(self, query: str, limit: int = 10) -> List[Dict]: ...
 
-[... more results ...]
+3. main.py
+   Score: 0.82
+   Modified: 2024-01-15T09:00:00
+   Snippet: async def search(query: str, limit: int = 10) -> str: ...
+
+> refresh
+Refresh completed:
+- Duration: 1.2 seconds
+- Files Processed: 5
+- Files Added: 0
+- Files Updated: 2
+- Files Removed: 0
+- Success: True
+
+> quit
 ```
 
-## Customizing the Demo
+## Code Structure
 
-### Modify Configuration
+### `simple_demo.py`
 
-Edit `client_demo/demo_config.json` to change:
+The main demo file contains:
 
-```json
-{
-  "source_directory": "./client_demo/sample_documents",
-  "index_output_directory": "./client_demo/indexes",
-  "included_extensions": [".txt", ".md", ".py"],
-  "excluded_extensions": [".pyc", ".pyo"],
-  "scan_interval_seconds": 300,
-  "max_file_size_mb": 10
-}
-```
+- **`LocalIndexingClient`**: MCP client class that handles server communication
+- **`run_demo()`**: Automated demonstration function
+- **`interactive_demo()`**: Interactive command-line interface
+- **Error handling**: Comprehensive error management with custom exceptions
 
-### Add Your Own Files
+### Key Features
 
-1. Add files to `client_demo/sample_documents/`
-2. Run the demo to see them indexed and searchable
-3. Try different file types and content
+1. **Clean Architecture**: Follows SOLID principles with clear separation of concerns
+2. **Type Safety**: Full type hints throughout the codebase
+3. **Error Handling**: Custom exceptions with detailed error messages
+4. **Logging**: Comprehensive logging for debugging and monitoring
+5. **Documentation**: Detailed docstrings following Google style
 
-### Test Different Searches
+## Error Handling
 
-Modify the search queries in `simple_demo.py`:
+The demo includes robust error handling for common scenarios:
 
-```python
-search_queries = [
-    "your custom search",
-    "another query",
-    '"exact phrase search"',
-    'boolean AND queries'
-]
-```
+- **Connection failures**: Server not available or misconfigured
+- **Tool execution errors**: Server-side errors during tool calls
+- **Invalid inputs**: Malformed queries or parameters
+- **Network issues**: Communication problems with the server
 
-## Understanding the Results
-
-### Search Results Format
-
-Each search result includes:
-- **File Path**: Location of the matching file
-- **Score**: Relevance score (higher = more relevant)
-- **Modified**: Last modification timestamp
-- **Snippet**: Context around the matching text
-
-### Index Statistics Meaning
-
-- **Indexed Files**: Number of successfully indexed documents
-- **Last Scan**: When the index was last updated
-- **Index Size**: Storage space used by the search index
-- **Errors**: Number of files that couldn't be indexed
+All errors are logged with context and provide user-friendly messages.
 
 ## Troubleshooting
 
 ### Common Issues
 
-1. **"Demo configuration not found"**
-   - Ensure you're running from the project root
-   - Check that `client_demo/demo_config.json` exists
+1. **"Client not connected"**
+   - Ensure the MCP server is running and accessible
+   - Check that `../main.py` exists and is executable
+   - Verify server configuration in `../config.json`
 
-2. **"Sample documents not found"**
-   - Verify `client_demo/sample_documents/` exists and contains files
-   - Run the demo setup if files are missing
+2. **"Connection failed"**
+   - Make sure you're running from the `client_demo` directory
+   - Check that the server has proper permissions
+   - Review server logs for startup errors
 
-3. **"Error running MCP server"**
-   - Check that dependencies are installed: `pip install -e .`
-   - Ensure `main.py` is accessible from current directory
-   - Verify Python version is 3.8+
+3. **"No results found"**
+   - Verify the index contains data (run `refresh --force`)
+   - Check that the search directory has indexable files
+   - Try broader search terms
 
-4. **No search results**
-   - Check that files were successfully indexed
-   - Try simpler search terms
-   - Verify file extensions match configuration
+4. **"Tool execution failed"**
+   - Check server logs for detailed error information
+   - Ensure proper file permissions for indexing
+   - Verify disk space for index storage
 
-### Debug Mode
+### Getting Help
 
-For more detailed output, you can modify the demo script to include debug information or run the MCP server separately:
+1. **Check logs**: Both client and server provide detailed logging
+2. **Review server status**: Use `stats` command to check server health
+3. **Force refresh**: Try `refresh --force` to rebuild the index
+4. **Server configuration**: Verify `../config.json` settings
 
-```bash
-# Run server separately for debugging
-python main.py
+## Development
 
-# In another terminal, test individual commands
-python -c "import asyncio; from client_demo.simple_demo import run_mcp_server_command; print(asyncio.run(run_mcp_server_command('get_index_stats')))"
-```
+### Adding New Features
 
-## Next Steps
+To extend the demo:
 
-After running the demo:
+1. **Add new methods** to `LocalIndexingClient` for additional server tools
+2. **Update interactive commands** in `interactive_demo()` function
+3. **Follow coding standards** from `../CODING_INSTRUCTIONS.md`
+4. **Add error handling** for new functionality
+5. **Update documentation** with new features
 
-1. **Explore the codebase** - Look at `main.py` and `src/` to understand implementation
-2. **Try your own data** - Point the config to your documents directory
-3. **Integrate with applications** - Use the MCP tools in your own projects
-4. **Experiment with search** - Try complex queries, boolean operators, phrase searches
-5. **Monitor performance** - Watch index statistics as you add more files
+### Code Quality
 
-## Advanced Usage
+The demo follows the project's coding standards:
 
-### Custom MCP Client
+- Functions under 20 lines
+- Comprehensive type hints
+- Detailed docstrings
+- Specific exception handling
+- KISS principle adherence
 
-The demo uses a simple subprocess approach. For production use, consider implementing a proper MCP client using the MCP SDK:
+## License
 
-```python
-from mcp import ClientSession, StdioServerParameters
-from mcp.client.stdio import stdio_client
-
-# More sophisticated client implementation
-async def create_mcp_client():
-    server_params = StdioServerParameters(
-        command="python", 
-        args=["main.py"]
-    )
-    
-    async with stdio_client(server_params) as streams:
-        async with ClientSession(streams[0], streams[1]) as session:
-            # Use session.call_tool() for tool calls
-            pass
-```
-
-### Integration Examples
-
-The MCP server can be integrated into:
-- **IDEs and editors** - For code search functionality
-- **Documentation systems** - For content discovery
-- **Knowledge management** - For information retrieval
-- **Content management** - For document search
-
-## Support
-
-For issues or questions:
-1. Check the main project README
-2. Review the source code documentation
-3. Create an issue in the project repository
-4. Refer to MCP documentation for protocol details
+This demo is part of the local-indexing-mcp project and follows the same licensing terms.

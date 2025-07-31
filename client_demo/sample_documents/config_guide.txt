@@ -1,0 +1,101 @@
+Configuration Guide for MCP Local Indexing Server
+
+This guide explains how to configure the MCP server for optimal performance and functionality.
+
+=== Basic Configuration ===
+
+Required settings in config.json:
+
+source_directory (string):
+  - Path to the directory containing files to index
+  - Can be relative or absolute path
+  - Should contain readable files with supported extensions
+  - Example: "./documents" or "/home/user/projects"
+
+index_output_directory (string):
+  - Where to store the SQLite database and index files
+  - Must be writable by the server process
+  - Will be created if it doesn't exist
+  - Example: "./indexes" or "/tmp/mcp_index"
+
+=== File Filtering ===
+
+included_extensions (array):
+  - List of file extensions to include in indexing
+  - Include the dot in extension names
+  - Common examples: [".txt", ".md", ".py", ".js", ".html"]
+  - Empty array means include all files
+
+excluded_extensions (array):
+  - File extensions to explicitly exclude
+  - Useful for skipping compiled or binary files
+  - Examples: [".pyc", ".pyo", ".exe", ".bin", ".jpg"]
+  - Takes precedence over included_extensions
+
+=== Performance Tuning ===
+
+scan_interval_seconds (number):
+  - How often to scan for file changes (in seconds)
+  - Lower values = more responsive to changes
+  - Higher values = less system resource usage
+  - Recommended: 300 (5 minutes) for development
+  - Production: 3600 (1 hour) or higher
+
+max_file_size_mb (number):
+  - Maximum file size to index (in megabytes)
+  - Files larger than this are skipped
+  - Prevents memory issues with huge files
+  - Recommended: 10 MB for most use cases
+  - Increase for specific needs (documentation, logs)
+
+=== Advanced Configuration ===
+
+Environment Variables:
+- MCP_DEBUG=1: Enable debug logging
+- MCP_LOG_LEVEL=INFO: Set logging level
+- MCP_CONFIG_PATH=/path/to/config.json: Custom config location
+
+Performance Optimization:
+- Use SSD storage for index_output_directory
+- Exclude directories with many small files
+- Consider file count vs. file size balance
+- Monitor database size growth
+
+Security Considerations:
+- Ensure index directory permissions are restrictive
+- Don't index sensitive files or credentials
+- Consider network access to index files
+- Regular backup of index database
+
+=== Example Configurations ===
+
+Development setup:
+{
+  "source_directory": "./src",
+  "index_output_directory": "./dev_index",
+  "included_extensions": [".py", ".js", ".md"],
+  "excluded_extensions": [".pyc", "__pycache__"],
+  "scan_interval_seconds": 60,
+  "max_file_size_mb": 5
+}
+
+Production setup:
+{
+  "source_directory": "/opt/documents",
+  "index_output_directory": "/var/lib/mcp/index",
+  "included_extensions": [".txt", ".md", ".rst", ".py", ".js", ".html"],
+  "excluded_extensions": [".pyc", ".pyo", ".bin", ".exe", ".so"],
+  "scan_interval_seconds": 1800,
+  "max_file_size_mb": 25
+}
+
+=== Troubleshooting ===
+
+Common configuration errors:
+1. Path not found - Check source_directory exists
+2. Permission denied - Verify write access to index_output_directory  
+3. No files indexed - Check included_extensions matches your files
+4. High memory usage - Reduce max_file_size_mb
+5. Slow performance - Increase scan_interval_seconds
+
+The server will log configuration validation errors on startup.

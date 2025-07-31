@@ -1,8 +1,0 @@
-{
-  "source_directory": "./client_demo/sample_documents",
-  "index_output_directory": "./client_demo/indexes", 
-  "included_extensions": [".txt", ".md", ".py"],
-  "excluded_extensions": [".pyc", ".pyo"],
-  "scan_interval_seconds": 300,
-  "max_file_size_mb": 10
-}
